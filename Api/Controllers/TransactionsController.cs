@@ -3,6 +3,7 @@
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -13,6 +14,7 @@ namespace Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]/
     public class TransactionsController : ControllerBase
     {
         private readonly AppDbContext _context;

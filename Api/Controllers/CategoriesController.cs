@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Category;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Data;
@@ -13,6 +14,7 @@ namespace Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CategoriesController : ControllerBase
     {
         private readonly AppDbContext _context;
