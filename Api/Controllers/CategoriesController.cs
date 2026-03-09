@@ -33,7 +33,10 @@ namespace Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
+            var userId = GetUserId();
+
             var categories = await _context.Categories
+                .Where(c => c.UserId == userId)
                 .Select(c => new CategoryResponseDto
                 {
                     Id = c.Id,
@@ -51,7 +54,9 @@ namespace Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var userId = GetUserId();
+
+            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
             if (category == null)
                 return NotFound();
 
@@ -63,6 +68,11 @@ namespace Api.Controllers
                 Icon = category.Icon
             });
         }
+
+        /// <summary>
+        /// Отримати UserId 
+        /// </summary>
+        private string GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value;
 
         /// <summary>
         /// Створити нову категорію
@@ -78,7 +88,8 @@ namespace Api.Controllers
                 Id = Guid.NewGuid(),
                 Name = dto.Name,
                 Type = type,
-                Icon = dto.Icon
+                Icon = dto.Icon,
+                UserId = GetUserId()
             };
 
             _context.Categories.Add(category);
@@ -101,7 +112,9 @@ namespace Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, CategoryUpdateDto dto)
         {
-            var category = await _context.Categories.FindAsync(id);
+
+            var userId = GetUserId();
+            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
 
             if (category == null)
                 return NotFound();
@@ -124,7 +137,8 @@ namespace Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var userId = GetUserId();
+            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
 
             if (category == null)
                 return NotFound();
