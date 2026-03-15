@@ -8,7 +8,7 @@
         /// <summary>
         /// Дані поточної сторінки
         /// </summary>
-        public List<T> Data { get; set; }
+        public List<T> Data { get; set; } = new();
 
         /// <summary>
         /// Загальна кількість записів
