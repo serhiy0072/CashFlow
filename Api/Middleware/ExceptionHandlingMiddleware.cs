@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace Api.Middleware
 {
     /// <summary>
-    /// Middleware лоя глобальної обробки помилок
+    /// Middleware для глобальної обробки помилок
     /// Перехоплює всі необроблені винятки і повертає JSON-відповідь
     /// </summary>
     public class ExceptionHandlingMiddleware

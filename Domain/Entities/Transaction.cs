@@ -21,7 +21,7 @@ namespace Domain.Entities
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// Назва категорії
+        /// Тип категорії
         /// </summary>
         public TransactionType Type { get; set; }
 

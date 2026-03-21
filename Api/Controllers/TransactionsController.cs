@@ -1,11 +1,10 @@
 ﻿using Application.DTOs.Transaction;
 using Application.DTOs;
-using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Domain.Entities;
 using Domain.Enums;
+using Application.Interfaces;
 
 namespace Api.Controllers
 {
@@ -17,11 +16,13 @@ namespace Api.Controllers
     [Authorize]
     public class TransactionsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ITransactionRepository _repository;
+        private readonly ICategoryRepository _categoryRepository;
 
-        public TransactionsController(AppDbContext context)
+        public TransactionsController(ITransactionRepository repository, ICategoryRepository categoryRepository)
         {
-            _context = context;
+            _repository = repository;
+            _categoryRepository = categoryRepository;
         }
 
         /// <summary>
@@ -31,71 +32,22 @@ namespace Api.Controllers
         public async Task<IActionResult> GetAll([FromQuery] TransactionsFilterDto filter)
         {
             var userId = GetUserId();
+            var (transactions, totalCount) = await _repository.GetFilteredAsync(userId, filter);
 
-            var query = _context.Transactions
-                .Include(t => t.Category)
-                .Where(t => t.UserId == userId)
-                .AsQueryable();
-
-            // --- Фільтрація ---
-            if (!string.IsNullOrEmpty(filter.Type) && Enum.TryParse<TransactionType>(filter.Type, true, out var type))
+            var response = transactions.Select(t => new TransactionResponseDto
             {
-                query = query.Where(t => t.Type == type);
-            }
-
-            if (filter.CategoryId.HasValue)
-            {
-                query = query.Where(t => t.CategoryId == filter.CategoryId.Value);
-            }
-
-            if (filter.DateFrom.HasValue)
-            {
-                query = query.Where(t => t.Date >= filter.DateFrom.Value);
-            }
-
-            if (filter.MinAmount.HasValue)
-            {
-                query = query.Where(t => t.Amount >= filter.MinAmount.Value);
-            }
-
-            if (filter.MaxAmount.HasValue)
-            {
-                query = query.Where(t => t.Amount <= filter.MaxAmount.Value);
-            }
-
-            // --- Сортування ---
-            query = filter.SortBy.ToLower() switch
-            {
-                "amount" => filter.SortDirection.ToLower() == "asc"
-                    ? query.OrderBy(t => t.Amount)
-                    : query.OrderByDescending(t => t.Amount),
-                _ => filter.SortDirection.ToLower() == "asc"
-                    ? query.OrderBy(t => t.Date)
-                    : query.OrderByDescending(t => t.Date)
-            };
-
-            // --- Підрахунок загальної кількості ---
-            var totalCount = await query.CountAsync();
-
-            // -- Пагінація ---
-            var transactions = await query
-                .Skip((filter.Page - 1) * filter.PageSize)
-                .Take(filter.PageSize)
-                .Select(t => new TransactionResponseDto
-                {
-                    Id = t.Id,
-                    Amount = t.Amount,
-                    Type = t.Type.ToString(),
-                    Description = t.Description,
-                    Date = t.Date,
-                    CategoryId = t.CategoryId,
-                    CategoryName = t.Category.Name
-                })
-                .ToListAsync();
+                Id = t.Id,
+                Amount = t.Amount,
+                Type = t.Type.ToString(),
+                Description = t.Description,
+                Date = t.Date,
+                CategoryId = t.CategoryId,
+                CategoryName = t.Category.Name
+            }).ToList();
 
             return Ok(new PagedResponseDto<TransactionResponseDto>
             {
-                Data = transactions,
+                Data = response,
                 TotalCount = totalCount,
                 Page = filter.Page,
                 PageSize = filter.PageSize,
@@ -110,9 +62,7 @@ namespace Api.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var userId = GetUserId();
-            var transaction = await _context.Transactions
-                .Include(t => t.Category)
-                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+            var transaction = await _repository.GetByIdAsync(id, userId);
 
             if (transaction == null)
                 return NotFound();
@@ -144,7 +94,7 @@ namespace Api.Controllers
                 return BadRequest("Type має бути 'Income' або 'Expense'");
 
             var userId = GetUserId();
-            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == dto.CategoryId && c.UserId == userId);
+            var category = await _categoryRepository.GetByIdAsync(dto.CategoryId, userId);
             if (category == null)
                 return BadRequest("Категорію не знайдено");
 
@@ -159,8 +109,7 @@ namespace Api.Controllers
                 UserId = userId
             };
 
-            _context.Transactions.Add(transaction);
-            await _context.SaveChangesAsync();
+            await _repository.CreateAsync(transaction);
 
             var response = new TransactionResponseDto
             {
@@ -173,7 +122,7 @@ namespace Api.Controllers
                 CategoryName = category.Name
             };
 
-            return CreatedAtAction(nameof(GetById), new { Id = transaction.Id }, response);
+            return CreatedAtAction(nameof(GetById), new { id = transaction.Id }, response);
         }
 
         /// <summary>
@@ -183,7 +132,7 @@ namespace Api.Controllers
         public async Task<IActionResult> Update(Guid id, TransactionUpdateDto dto)
         {
             var userId = GetUserId();
-            var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+            var transaction = await _repository.GetByIdAsync(id, userId);
 
             if (transaction == null)
                 return NotFound();
@@ -191,8 +140,8 @@ namespace Api.Controllers
             if (!Enum.TryParse<TransactionType>(dto.Type, true, out var type))
                 return BadRequest("Type має бути 'Income' або 'Expense'");
 
-            var categoryExist = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId && c.UserId == userId);
-            if (!categoryExist)
+            var category = await _categoryRepository.GetByIdAsync(dto.CategoryId, userId);
+            if (category == null)
                 return BadRequest("Категорію не знайдено");
 
             transaction.Amount = dto.Amount;
@@ -201,7 +150,7 @@ namespace Api.Controllers
             transaction.Date = dto.Date;
             transaction.CategoryId = dto.CategoryId;
 
-            await _context.SaveChangesAsync();
+            await _repository.UpdateAsync(transaction);
 
             return NoContent();
         }
@@ -213,16 +162,14 @@ namespace Api.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var userId = GetUserId();
-            var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+            var transaction = await _repository.GetByIdAsync(id, userId);
 
             if (transaction == null)
                 return NotFound();
 
-            _context.Transactions.Remove(transaction);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(transaction);
 
             return NoContent();
-
         }
     }
 }

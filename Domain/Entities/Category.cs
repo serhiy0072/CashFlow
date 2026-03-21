@@ -38,7 +38,7 @@ namespace Domain.Entities
 
         /// <summary>
         /// Навігаційна властивість: список транзакцій цієї категороії
-        /// </summary>\
+        /// </summary>
         public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }

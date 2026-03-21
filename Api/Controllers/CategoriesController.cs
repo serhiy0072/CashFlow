@@ -1,10 +1,9 @@
 ﻿using Application.DTOs.Category;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Domain.Entities;
 using Domain.Enums;
-using Infrastructure.Data;
+using Application.Interfaces;
 
 
 namespace Api.Controllers
@@ -17,14 +16,14 @@ namespace Api.Controllers
     [Authorize]
     public class CategoriesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ICategoryRepository _repository;
 
         /// <summary>
-        /// DbContext приходить автоматично через Dependency Injection
+        /// Репозиторій приходить автоматично через Dependency Injection
         /// </summary>
-        public CategoriesController(AppDbContext context)
+        public CategoriesController(ICategoryRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         /// <summary>
@@ -34,18 +33,17 @@ namespace Api.Controllers
         public async Task<IActionResult> GetAll()
         {
             var userId = GetUserId();
+            var categories = await _repository.GetAllAsync(userId);
 
-            var categories = await _context.Categories
-                .Where(c => c.UserId == userId)
-                .Select(c => new CategoryResponseDto
+            var response = categories.Select(c => new CategoryResponseDto
                 {
                     Id = c.Id,
                     Name = c.Name,
                     Type = c.Type.ToString(),
                     Icon = c.Icon
                 })
-                .ToListAsync();
-            return Ok(categories);
+                .ToList();
+            return Ok(response);
         }
 
         /// <summary>
@@ -56,7 +54,7 @@ namespace Api.Controllers
         {
             var userId = GetUserId();
 
-            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+            var category = await _repository.GetByIdAsync(id, userId);
             if (category == null)
                 return NotFound();
 
@@ -92,8 +90,7 @@ namespace Api.Controllers
                 UserId = GetUserId()
             };
 
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
+            await _repository.CreateAsync(category);
 
             var response = new CategoryResponseDto
             {
@@ -114,7 +111,7 @@ namespace Api.Controllers
         {
 
             var userId = GetUserId();
-            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+            var category = await _repository.GetByIdAsync(id, userId);
 
             if (category == null)
                 return NotFound();
@@ -126,7 +123,7 @@ namespace Api.Controllers
             category.Type = type;
             category.Icon = dto.Icon;
 
-            await _context.SaveChangesAsync();
+            await _repository.UpdateAsync(category);
 
             return NoContent();
         }
@@ -138,13 +135,12 @@ namespace Api.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var userId = GetUserId();
-            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+            var category = await _repository.GetByIdAsync(id, userId);
 
             if (category == null)
                 return NotFound();
 
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(category);
 
             return NoContent();
         }
