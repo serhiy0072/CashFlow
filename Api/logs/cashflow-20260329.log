@@ -1,0 +1,7 @@
+2026-03-29 01:00:35.698 +02:00 [INF] User profile is available. Using 'C:\Users\serhi\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-03-29 01:00:36.065 +02:00 [INF] Now listening on: https://localhost:7130
+2026-03-29 01:00:36.067 +02:00 [INF] Now listening on: http://localhost:5147
+2026-03-29 01:00:36.292 +02:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-03-29 01:00:36.294 +02:00 [INF] Hosting environment: Development
+2026-03-29 01:00:36.295 +02:00 [INF] Content root path: C:\Users\serhi\source\repos\CashFlow\Api
+2026-03-29 01:08:50.628 +02:00 [INF] HTTP POST /api/auth/login responded 401 in 3298.8849 ms
