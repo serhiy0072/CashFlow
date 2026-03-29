@@ -34,7 +34,7 @@ namespace Application.DTOs.Auth
         /// <summary>
         /// Прізвище користувача (не обов'язково)
         /// </summary>
-        [StringLength(50, MinimumLength = 2)]
+        [StringLength(50)]
         public string LastName { get; set; } = string.Empty;
     }
 }
