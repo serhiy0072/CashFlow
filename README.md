@@ -6,10 +6,13 @@ REST API для обліку особистих фінансів. Дозволя
 
 - **Backend:** ASP.NET Core Web API (.NET 10)
 - **ORM:** Entity Framework Core
-- **База даних:** PostgreSQL 18
+- **База даних:** PostgreSQL 17
 - **Аутентифікація:** ASP.NET Identity + JWT Bearer
 - **Архітектура:** Clean Architecture + Repository Pattern
 - **Валідація:** DataAnnotations
+- **Логування:** Serilog (консоль + файл)
+- **Тестування:** xUnit + EF Core InMemory
+- **Контейнеризація:** Docker + Docker Compose
 
 ## Структура проєкту
 
@@ -126,7 +129,7 @@ GET /api/transactions?type=Expense&minAmount=100&page=1&pageSize=10&sortBy=date&
 ### Статистика
 | Метод | URL | Опис |
 |-------|-----|------|
-| GET | `/api/statistics/dashboard` | Дашборд за поточний місяць |
+| GET | `/api/statistics/dashboard` | Дашборд за період |
 
 **Параметри:**
 ```
@@ -150,11 +153,40 @@ GET /api/statistics/dashboard?dateFrom=2026-01-01&dateTo=2026-03-31
 
 ## Як запустити
 
-### Передумови
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [PostgreSQL 18](https://www.postgresql.org/download/)
+### Docker (рекомендовано)
 
-### Кроки
+Найпростіший спосіб — один рядок, нічого встановлювати не потрібно крім Docker.
+
+1. **Клонуй репозиторій:**
+```bash
+git clone https://github.com/serhiy0072/CashFlow.git
+cd CashFlow
+```
+
+2. **Створи файл `.env`** в корені репозиторію:
+```env
+DB_PASSWORD='your_postgres_password'
+JWT_KEY='Your_Super_Secret_Key_At_Least_32_Characters!'
+```
+
+3. **Запусти:**
+```bash
+docker compose up --build
+```
+
+API буде доступний за адресою `http://localhost:8080`
+
+Міграції застосовуються автоматично при старті. PostgreSQL дані зберігаються між перезапусками у Docker volume.
+
+---
+
+### Локальний запуск
+
+#### Передумови
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [PostgreSQL 17](https://www.postgresql.org/download/)
+
+#### Кроки
 
 1. **Клонуй репозиторій:**
 ```bash
@@ -187,6 +219,14 @@ dotnet run --project Api
 
 API буде доступний за адресою `https://localhost:7130`
 
+## Тести
+
+```bash
+dotnet test
+```
+
+Unit-тести покривають усі три репозиторії (Category, Transaction, Budget) з використанням EF Core InMemory бази даних.
+
 ## 🏗 Архітектурні рішення
 
 - **Repository Pattern** — контролери працюють через інтерфейси, не напряму з DbContext
@@ -195,6 +235,7 @@ API буде доступний за адресою `https://localhost:7130`
 - **Enum як string** — TransactionType зберігається як текст в базі
 - **DataAnnotations** — валідація на рівні DTO
 - **Global Exception Middleware** — єдина точка обробки помилок
+- **Serilog** — структуроване логування в консоль і файл з фільтрацією системного шуму
 
 ## Автор
 
