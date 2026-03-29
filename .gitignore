@@ -5,6 +5,7 @@ obj/
 *.suo
 *.vs/
 .vs/
+.env
 
 ## User secrets
 **/appsettings.Development.json
